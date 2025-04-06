@@ -1,8 +1,12 @@
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+// Replace `require` with `import`
+dotenv.config();
+
 const secret = process.env.JWTSECRET;
+
 export async function generateToken(res, userDetails) {
-  // const { id, userName, email, roleType } = userDetails;
   const token = jwt.sign(
     {
       data: userDetails,
@@ -10,13 +14,11 @@ export async function generateToken(res, userDetails) {
     secret,
     { expiresIn: 60 * 60 }
   );
+
   res.cookie("jwt", token, {
     maxAge: 60 * 60 * 1000,
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV !== "development",
   });
-  // return token ; //misisng token
 }
-
-

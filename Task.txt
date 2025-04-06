@@ -1,0 +1,29 @@
+Plannig 
+
+1 user models and controller with route test
+{
+  user model -> Done
+  controller {
+              login ->done
+              register -> done
+              logout -> done
+              
+                  
+              }
+
+}
+2 product models and controller with route test
+{
+
+
+}
+3 cart models and controller with route test
+{
+
+
+}
+4 order models and controller with route test
+{
+
+
+}

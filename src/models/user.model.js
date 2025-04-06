@@ -10,14 +10,14 @@ const userSchema = new mongoose.Schema(
     lastName: String,
     phoneNumber: {
       type: String, 
-      unique: true,
-      sparse: true,
+      unique: true,   // This already creates an index
+      sparse: true,   // Makes the index sparse (for null or undefined values)
     },
     email: {
       type: String,
       required: true,
-      unique: true,
-      sparse: true,
+      unique: true,   // This already creates an index
+      sparse: true,   // Makes the index sparse
     },
     password: {
       type: String,
@@ -45,10 +45,10 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// indx
-userSchema.index({ userName: 1 });
-userSchema.index({ phoneNumber: 1 });
-userSchema.index({ email: 1 });
+// Remove duplicate index definitions
+// userSchema.index({ userName: 1 });   // No need for this since it's not unique
+// userSchema.index({ phoneNumber: 1 });  // Removed due to unique constraint
+// userSchema.index({ email: 1 });  // Removed due to unique constraint
 
 const user = mongoose.model('User', userSchema);
 export default user;
