@@ -1,14 +1,14 @@
 import express from 'express'; 
 import bodyParser from 'body-parser'; 
 import cookieParser from 'cookie-parser';
-import authRoutes from './routers/auth.routes.js';
+import userAuthRoutes from './routers/userAuth.routes.js';
 
 const app = express();  
 
 app.use(express.json());  
 app.use(cookieParser());
 
-app.use('/api/auth', authRoutes); 
+app.use('/api/auth', userAuthRoutes); 
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
