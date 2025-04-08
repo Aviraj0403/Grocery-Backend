@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());  
 app.use(cookieParser());
 
-app.use('/api/auth', userAuthRoutes); 
+app.use('/api', userAuthRoutes); 
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });

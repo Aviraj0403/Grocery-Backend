@@ -2,8 +2,8 @@ import express from 'express';
 import {
   register,
   login,
-  requestOtpLogin,
-  verifyOtpLogin,
+  // requestOtpLogin,
+  // verifyOtpLogin,
   forgotPassword,
   resetPassword,
   googleLogin,
@@ -19,8 +19,8 @@ const router = express.Router();
 // Public Routes
 router.post('/register', register);
 router.post('/login', login);
-router.post('/otp/request', requestOtpLogin);
-router.post('/otp/verify', verifyOtpLogin);
+// router.post('/otp/request', requestOtpLogin);
+// router.post('/otp/verify', verifyOtpLogin);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/google-login', googleLogin);

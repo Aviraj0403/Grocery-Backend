@@ -41,6 +41,8 @@ const userSchema = new mongoose.Schema(
       code: String,
       expiresAt: Date,
     },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
   },
   { timestamps: true }
 );
@@ -50,5 +52,5 @@ const userSchema = new mongoose.Schema(
 // userSchema.index({ phoneNumber: 1 });  // Removed due to unique constraint
 // userSchema.index({ email: 1 });  // Removed due to unique constraint
 
-const user = mongoose.model('User', userSchema);
-export default user;
+const users = mongoose.model('user', userSchema);
+export default users;
