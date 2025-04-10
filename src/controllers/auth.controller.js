@@ -4,6 +4,7 @@ import { comparePassword } from '../utils/comparePassword.js';
 import { generateToken } from '../utils/generateJWTToken.js';
 import hashPassword from '../utils/hashPassword.js';
 import generateOTP from '../utils/generateOTP.js';
+import sendMailer from '../utils/emailService.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { OAuth2Client } from 'google-auth-library';
@@ -139,42 +140,87 @@ export const login = async (req, res) => {
 
 // Forgot Password
 export const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ message: "Email required" });
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email required" });
 
-  const user = await users.findOne({ email });
-  if (!user) return res.status(404).json({ message: "User not found" });
+    const user = await users.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-  const token = crypto.randomBytes(20).toString('hex');
-  const expires = new Date(Date.now() + 15 * 60 * 1000);
+    // const token = crypto.randomBytes(20).toString('hex');
+    // const expires = new Date(Date.now() + 15 * 60 * 1000);
+    
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); 
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    
+    user.resetOTP = otp;
+    user.resetOTPExpiry = otpExpiry;
+    // user.resetPasswordToken = token;
+    // user.resetPasswordExpires = expires;
+    await user.save();
 
-  user.resetPasswordToken = token;
-  user.resetPasswordExpires = expires;
-  await user.save();
+    // mail
+    await sendMailer(email, "Password Reset OTP", "otp", {
+      customerName: user.userName,
+      otp,
+    });
 
-  console.log(`Reset token for ${email}: ${token}`);
-  res.status(200).json({ message: "Reset token sent to email" });
+    res.status(200).json({ message: "OTP sent to your email" });
+
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
 };
 
 export const resetPassword = async (req, res) => {
-  const { token, newPassword } = req.body;
+  try {
+    const { email, otp, newPassword } = req.body;
+    const user = await users.findOne({ email });
 
-  const user = await users.findOne({
-    resetPasswordToken: token,
-    resetPasswordExpires: { $gt: Date.now() }
-  });
+    if (!user || user.resetOTP !== otp || user.otpExpiry < new Date()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
 
-  if (!user) return res.status(400).json({ message: "Invalid or expired token" });
-
-  user.password = hashPassword(newPassword);
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpires = undefined;
-  await user.save();
-
-  res.status(200).json({ message: "Password reset successful" });
+    user.password = hashPassword(newPassword);
+    user.resetOTP = null;
+    user.otpExpiry = null;
+    await user.save();
+    await sendMailer(email, "Password Reset Confirmation", "resetPassword", {
+      customerName: user.userName,
+    });
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to reset password", error: err.message });
+  }
 };
 
-// Google OAuth Login
+// Google OAuth Middleware
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await users.findById(userId);
+    const isMatch = await comparePassword(user.password, currentPassword);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = hashPassword(newPassword);
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to change password", error: err.message });
+  }
+};
+
+// Google OAuth Login  --> Pending
 export const googleLogin = async (req, res) => {
   const { tokenId } = req.body;
 

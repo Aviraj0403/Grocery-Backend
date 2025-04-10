@@ -21,9 +21,9 @@ router.post('/register', register);
 router.post('/login', login);
 // router.post('/otp/request', requestOtpLogin);
 // router.post('/otp/verify', verifyOtpLogin);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
-router.post('/google-login', googleLogin);
+router.post('/forgotPassword', forgotPassword);
+router.post('/resetPassword', resetPassword);
+router.post('/googleLogin', googleLogin);
 
 // Protected Routes
 router.post('/logout', verifyToken, logout);

@@ -189,7 +189,7 @@ function signUpTemplate() {
       <p>This OTP is valid for 10 minutes.</p>
       <p>If you didn't request this, please ignore this email.</p>
       <br>
-      <p>– The Team</p>
+      <p>– Grocery Team </p>
     </div>
     `;
   }

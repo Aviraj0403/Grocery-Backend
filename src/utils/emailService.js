@@ -1,4 +1,5 @@
-import transporter from "../config/nodeMailerConfig";
+import transporter from "../config/nodeMailerConfig.js";
+
 import {
   signUpTemplate,
   orderProduct,
@@ -7,7 +8,7 @@ import {
   orderStatusChange,
   otpTemplate,
   resetPasswordTemplate,
-} from "./emailTemplate";
+} from "./emailTemplate.js";
 import dotenv from "dotenv";
 
 dotenv.config();
