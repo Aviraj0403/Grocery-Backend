@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import userAuthRoutes from './routers/userAuth.routes.js';
 import categoryRoutes from './routers/category.routes.js';
 import productRoutes from './routers/product.routes.js';
+import {logSessionActivity} from './middlewares/logSessionActivity.js';
 import cors from 'cors';
 const app = express();  
 
@@ -15,6 +16,7 @@ app.use(cors({
 app.use(express.json());  
 app.use(cookieParser());
 
+app.use(logSessionActivity);
 app.use('/api', userAuthRoutes);
 app.use('/api', productRoutes);
 app.use('/api',categoryRoutes);

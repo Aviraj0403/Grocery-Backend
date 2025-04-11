@@ -202,7 +202,7 @@ function signUpTemplate() {
       <p>Your password has been successfully reset.</p>
       <p>If you didn't make this change, please contact our support team immediately.</p>
       <br>
-      <p>– Frost Team</p>
+      <p>– Grocery Team</p>
     </div>
     `;
   }
