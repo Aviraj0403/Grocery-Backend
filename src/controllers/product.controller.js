@@ -103,7 +103,7 @@ export const addProductImages = async (req, res) => {
 
       // Apply transformations like resizing to 800x800px and convert to WebP format
       const uploadResult = await cloudinary.uploader.upload(file.path, {
-        folder: 'your_folder_name', // Optional: specify the folder in Cloudinary
+        folder: process.env.CF, // Optional: specify the folder in Cloudinary
         resource_type: 'image', // Specify that this is an image
         transformation: [
           { width: 800, height: 800, crop: 'limit' },  // Resize image to fit within 800x800px
