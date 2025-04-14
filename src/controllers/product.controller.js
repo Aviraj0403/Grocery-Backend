@@ -106,16 +106,14 @@ export const addProductImages = async (req, res) => {
         folder: process.env.CF, // Optional: specify the folder in Cloudinary
         resource_type: 'image', // Specify that this is an image
         transformation: [
-          { width: 800, height: 800, crop: 'limit' },  // Resize image to fit within 800x800px
-          { quality: 'auto' },                          // Automatic quality adjustment for better performance
-          { fetch_format: 'webp' },                     // Convert the image to WebP format for better compression
+          { width: 800, height: 800, crop: 'limit' }, 
+          { quality: 'auto' },                          
+          { fetch_format: 'webp' },                     
         ],
       });
 
-      // Push Cloudinary secure URL to the imageUrls array
       imageUrls.push(uploadResult.secure_url);
 
-      // After uploading to Cloudinary, delete the local file
       fs.unlinkSync(file.path);
     }
 
@@ -306,7 +304,6 @@ export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Attempt to delete the product by ID
     const product = await Product.findByIdAndDelete(id);
 
     // If the product is not found, return a 404 error
