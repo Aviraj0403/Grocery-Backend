@@ -5,6 +5,7 @@ import { generateToken } from '../utils/generateJWTToken.js';
 import hashPassword from '../utils/hashPassword.js';
 import generateOTP from '../utils/generateOTP.js';
 import sendMailer from '../utils/emailService.js';
+import { sendOtpViaSms } from "../utils/sendSms.js";
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { OAuth2Client } from 'google-auth-library';
@@ -92,26 +93,43 @@ export const login = async (req, res) => {
 // export const requestOtpLogin = async (req, res) => {
 //   try {
 //     const { phoneNumber } = req.body;
-//     if (!phoneNumber) return res.status(400).json({ message: "Phone number is required" });
-
-//     let user = await users.findOne({ phoneNumber });
-//     if (!user) {
-//       user = await users.create({ userName: `user${Date.now()}`, phoneNumber, isVerified: false });
+//     if (!phoneNumber) {
+//       return res.status(400).json({ message: "Phone number is required" });
 //     }
 
-//     const otp = generateOTP();
+//     let user = await users.findOne({ phoneNumber });
+
+//     if (!user) {
+//       user = await users.create({
+//         userName: `user${Date.now()}`,
+//         phoneNumber,
+//         isVerified: false,
+//       });
+//     }
+
+//     const otp = Math.floor(100000 + Math.random() * 900000); // 6-digit OTP
 //     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
 //     user.otp = { code: otp, expiresAt };
 //     await user.save();
 
-//     console.log(`Mock OTP sent to ${phoneNumber}: ${otp}`);
+//     const message = `Your OTP code is ${otp}. It will expire in 5 minutes. -Team AviRaj`;
+
+//     const smsResponse = await sendOtpViaSms(phoneNumber, message);
+
+//     if (smsResponse.data.response?.status !== "success") {
+//       console.error("❌ SMS failed:", smsResponse.data);
+//       return res.status(500).json({ message: "Failed to send OTP via SMS" });
+//     }
+
+//     console.log(`✅ OTP sent to ${phoneNumber}: ${otp}`);
 //     res.status(200).json({ message: "OTP sent successfully" });
+
 //   } catch (error) {
-//     console.log(error);
+//     console.error("❌ OTP error:", error.message);
 //     res.status(500).json({ message: "Failed to send OTP" });
 //   }
 // };
-
 // Verify OTP
 // export const verifyOtpLogin = async (req, res) => {
 //   try {
