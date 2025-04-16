@@ -10,6 +10,7 @@ import {
   logout,
   profile,
   authMe,
+  refreshToken,
 } from '../controllers/auth.controller.js';
 
 import { verifyToken } from '../middlewares/verifyToken.js'; 
@@ -29,5 +30,7 @@ router.post('/user/googleLogin', googleLogin);
 router.post('/user/logout', verifyToken, logout);
 router.get('/user/profile', verifyToken, profile);
 router.get('/me', verifyToken, authMe);
+router.post('/auth/refresh-token', refreshToken);
+
 
 export default router;

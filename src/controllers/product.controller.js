@@ -25,39 +25,43 @@ export const createProduct = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!name || !category || !variants || !variants.length) {
+    if (!name || !category) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields: name, category, or variants."
+        message: "Missing required fields: name and category."
       });
     }
-    const slug = slugify(name, {
+
+    // Create initial slug from name
+    let baseSlug = slugify(name, {
       lower: true,
-      strict: true, // removes special characters
+      strict: true,  // removes special characters
       replacement: '-', // replaces spaces with -
     });
-
-    // Check for duplicate slug
-    const existingProduct = await Product.findOne({ slug });
-    if (existingProduct) {
-      return res.status(409).json({
-        success: false,
-        message: "A product with the same name (slug) already exists."
-      });
+    let slug = baseSlug;
+    let count = 1;
+    // Generate a unique slug if a product with the same slug exists
+    while (await Product.findOne({ slug })) {
+      slug = `${baseSlug}-${count}`;
+      count++;
     }
+
+    // Remove productCode if it is an empty string.
+    const validProductCode = productCode && productCode.trim() !== "" ? productCode : undefined;
 
     // Create new product
     const newProduct = await Product.create({
       name,
-      slug, // auto-generated
+      slug, // our unique slug
       multilingualName,
-      productCode,
+      productCode: validProductCode,
       category,
-      subCategory,
+      // Convert an empty string to null for subCategory so it passes type casting
+      subCategory: subCategory === "" ? null : subCategory,
       brand,
       description,
       variants,
-      activeVariant: activeVariant || variants[0].unit,
+      activeVariant: activeVariant || (variants && variants.length > 0 ? variants[0].unit : ""),
       tags,
       images,
       discount: discount || 0,
@@ -82,15 +86,17 @@ export const createProduct = async (req, res) => {
     });
   }
 };
+
 export const addProductImages = async (req, res) => {
   try {
     const { productId } = req.params; // Get the productId from URL parameters
     const files = req.files; // Get the files uploaded via form-data
 
-    if (!files || files.length === 0) {
+    // Allow either 1 image or exactly 3 images
+    if (!files || (files.length !== 1 && files.length !== 3)) {
       return res.status(400).json({
         success: false,
-        message: "No files uploaded. Please upload images.",
+        message: "Please upload either 1 or 3 images.",
       });
     }
 
@@ -101,30 +107,30 @@ export const addProductImages = async (req, res) => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Apply transformations like resizing to 800x800px and convert to WebP format
+      // Apply transformations: resizing to 800x800px and converting to WebP format
       const uploadResult = await cloudinary.uploader.upload(file.path, {
-        folder: process.env.CF, // Optional: specify the folder in Cloudinary
+        folder: process.env.CF, // Folder name from environment variable
         resource_type: 'image', // Specify that this is an image
         transformation: [
-          { width: 800, height: 800, crop: 'limit' }, 
-          { quality: 'auto' },                          
-          { fetch_format: 'webp' },                     
+          { width: 800, height: 800, crop: 'limit' },
+          { quality: 'auto' },
+          { fetch_format: 'webp' },
         ],
       });
 
       imageUrls.push(uploadResult.secure_url);
 
+      // Remove file from local storage after uploading
       fs.unlinkSync(file.path);
     }
 
-    // Find the product by ID and update the images array with Cloudinary URLs
+    // Update the product with the new image URLs
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
-      { $push: { images: { $each: imageUrls } } }, // Add Cloudinary URLs to the images array
-      { new: true } // Return the updated product
+      { images: imageUrls },
+      { new: true } // Return the updated document
     );
 
-    // Return a successful response with the updated product
     res.status(200).json({
       success: true,
       message: "Images uploaded successfully.",
@@ -139,6 +145,7 @@ export const addProductImages = async (req, res) => {
     });
   }
 };
+
 // Get All Products
 export const getAllProducts = async (req, res) => {
   try {
