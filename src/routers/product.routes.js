@@ -15,7 +15,7 @@ router.post("/createProduct",createProduct);
 router.post('/products/:productId/images', upload.array('files'), addProductImages);
 router.get("/getAllProducts",getAllProducts);
 router.get("/getProduct/:id",getProduct);
-router.put("/updateProduct/:id",updateProduct)
+router.put("/updateProduct/:productId",updateProduct)
 router.delete("/deleteProduct/:id",deleteProduct);
 
 

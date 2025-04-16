@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-
+import users from "./user.model.js";
 const variantSchema = new mongoose.Schema({
   unit: { type: String, required: true },
   price: { type: Number, required: true },
@@ -45,7 +45,7 @@ const productSchema = new mongoose.Schema({
   reviewCount: { type: Number, default: 0 },
   vendor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'users',
     default: null,
   },
   bestBeforeDays: { type: Number },

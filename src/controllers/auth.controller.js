@@ -1,4 +1,3 @@
-// authController.js
 import users from '../models/user.model.js';
 import { comparePassword } from '../utils/comparePassword.js';
 import { generateToken } from '../utils/generateJWTToken.js';

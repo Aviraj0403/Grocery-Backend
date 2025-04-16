@@ -86,7 +86,6 @@ export const createProduct = async (req, res) => {
     });
   }
 };
-
 export const addProductImages = async (req, res) => {
   try {
     const { productId } = req.params; // Get the productId from URL parameters
@@ -100,40 +99,65 @@ export const addProductImages = async (req, res) => {
       });
     }
 
-    // Array to hold Cloudinary URLs
-    const imageUrls = [];
+    // Fetch the product to know its existing images
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found."
+      });
+    }
 
-    // Upload each file to Cloudinary
+    // Delete previous images from Cloudinary
+    if (product.images && product.images.length > 0) {
+      for (const imageUrl of product.images) {
+        // Assuming Cloudinary URLs follow the pattern:
+        // https://res.cloudinary.com/<cloud_name>/image/upload/v<version>/<public_id>.<extension>
+        const regex = /\/upload\/(?:v\d+\/)?([^\.]+)/;
+        const match = imageUrl.match(regex);
+        if (match && match[1]) {
+          const publicId = match[1]; // Extracted public_id
+          try {
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+          } catch (err) {
+            console.error("Error deleting image from Cloudinary:", err);
+            // Optionally, continue or send an error response if image deletion is critical.
+          }
+        }
+      }
+    }
+
+    // Upload new images to Cloudinary
+    const imageUrls = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Apply transformations: resizing to 800x800px and converting to WebP format
+      // Transformations: resizing to 800x800px and converting to WebP format.
       const uploadResult = await cloudinary.uploader.upload(file.path, {
-        folder: process.env.CF, // Folder name from environment variable
-        resource_type: 'image', // Specify that this is an image
+        folder: process.env.CF, // Folder name from your environment variable
+        resource_type: 'image',
         transformation: [
           { width: 800, height: 800, crop: 'limit' },
           { quality: 'auto' },
           { fetch_format: 'webp' },
         ],
       });
-
       imageUrls.push(uploadResult.secure_url);
 
-      // Remove file from local storage after uploading
+      // Remove file from local storage after uploading.
       fs.unlinkSync(file.path);
     }
 
-    // Update the product with the new image URLs
+    // Update the product with the new image URLs.
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
       { images: imageUrls },
-      { new: true } // Return the updated document
+      { new: true } // Return the updated document.
     );
 
     res.status(200).json({
       success: true,
-      message: "Images uploaded successfully.",
+      message: "Images updated successfully.",
       data: updatedProduct,
     });
   } catch (error) {
@@ -145,6 +169,64 @@ export const addProductImages = async (req, res) => {
     });
   }
 };
+// export const addProductImages = async (req, res) => {
+//   try {
+//     const { productId } = req.params; // Get the productId from URL parameters
+//     const files = req.files; // Get the files uploaded via form-data
+
+//     // Allow either 1 image or exactly 3 images
+//     if (!files || (files.length !== 1 && files.length !== 3)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Please upload either 1 or 3 images.",
+//       });
+//     }
+
+//     // Array to hold Cloudinary URLs
+//     const imageUrls = [];
+
+//     // Upload each file to Cloudinary
+//     for (let i = 0; i < files.length; i++) {
+//       const file = files[i];
+
+//       // Apply transformations: resizing to 800x800px and converting to WebP format
+//       const uploadResult = await cloudinary.uploader.upload(file.path, {
+//         folder: process.env.CF, // Folder name from environment variable
+//         resource_type: 'image', // Specify that this is an image
+//         transformation: [
+//           { width: 800, height: 800, crop: 'limit' },
+//           { quality: 'auto' },
+//           { fetch_format: 'webp' },
+//         ],
+//       });
+
+//       imageUrls.push(uploadResult.secure_url);
+
+//       // Remove file from local storage after uploading
+//       fs.unlinkSync(file.path);
+//     }
+
+//     // Update the product with the new image URLs
+//     const updatedProduct = await Product.findByIdAndUpdate(
+//       productId,
+//       { images: imageUrls },
+//       { new: true } // Return the updated document
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Images uploaded successfully.",
+//       data: updatedProduct,
+//     });
+//   } catch (error) {
+//     console.error("Image upload failed:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Image upload failed.",
+//       error: error.message,
+//     });
+//   }
+// };
 
 // Get All Products
 export const getAllProducts = async (req, res) => {
@@ -190,10 +272,10 @@ export const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Fetch the product by ID and populate category and subCategory fields
-    const product = await Product.findById(id).populate("category subCategory");
+    // Fetch the product by ID and populate category, subCategory, and vendor fields.
+    const product = await Product.findById(id).populate("category subCategory vendor");
 
-    // If the product is not found, return a 404 error
+    // If the product is not found, return a 404 error.
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -201,13 +283,12 @@ export const getProduct = async (req, res) => {
       });
     }
 
-    // Return the product details if found
-    res.json({
+    // Return the product details if found.
+    res.status(200).json({
       success: true,
       product,
     });
   } catch (error) {
-    // Handle any unexpected errors
     console.error("Error fetching product:", error);
     res.status(500).json({
       success: false,
@@ -218,6 +299,8 @@ export const getProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { productId } = req.params; // ID of the product to update
+
+    // Extract fields to update from request body
     const {
       name,
       multilingualName,
@@ -235,75 +318,69 @@ export const updateProduct = async (req, res) => {
       bestBeforeDays,
       isAvailable,
       isFeatured,
-      meta
+      meta,
     } = req.body;
 
-    // Validate required fields
-    if (!name || !category || !variants || !variants.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields: name, category, or variants."
+    // Build an update object with provided fields
+    const updateData = {
+      multilingualName,
+      // Set productCode only if it's valid (non-empty); otherwise, undefined will remove it from update
+      productCode: productCode && productCode.trim() !== "" ? productCode : undefined,
+      category,
+      // Convert an empty string to null so Mongoose can cast it properly
+      subCategory: subCategory === "" ? null : subCategory,
+      brand,
+      description,
+      variants,
+      activeVariant,
+      tags,
+      images,
+      discount,
+      vendor,
+      bestBeforeDays,
+      isAvailable,
+      isFeatured,
+      meta,
+    };
+
+    // If the name is being updated, generate a new slug and include the name field as well.
+    if (name) {
+      let baseSlug = slugify(name, {
+        lower: true,
+        strict: true,      // remove special characters
+        replacement: '-',  // replace spaces with dashes
       });
+      let slug = baseSlug;
+      let count = 1;
+
+      // Loop until a unique slug is found. Exclude the current product by _id.
+      while (await Product.findOne({ slug, _id: { $ne: productId } })) {
+        slug = `${baseSlug}-${count}`;
+        count++;
+      }
+      updateData.name = name;
+      updateData.slug = slug;
     }
 
-    // Generate slug from the name automatically (if changed)
-    const slug = slugify(name, {
-      lower: true,
-      strict: true,
-      replacement: '-',
-    });
-
-    // Check for duplicate slug only if name changed
-    const existingProduct = await Product.findOne({ slug, _id: { $ne: productId } });
-    if (existingProduct) {
-      return res.status(409).json({
-        success: false,
-        message: "A product with the same name (slug) already exists."
-      });
-    }
-
-    // Find the product to update
-    const product = await Product.findById(productId);
-    if (!product) {
+    // Update the product document and return the new version
+    const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
+    if (!updatedProduct) {
       return res.status(404).json({
         success: false,
-        message: "Product not found."
+        message: "Product not found.",
       });
     }
-
-    // Update the product with new data
-    product.name = name;
-    product.slug = slug;
-    product.multilingualName = multilingualName;
-    product.productCode = productCode || product.productCode; // Keep the old value if not provided
-    product.category = category;
-    product.subCategory = subCategory;
-    product.brand = brand;
-    product.description = description;
-    product.variants = variants;
-    product.activeVariant = activeVariant || variants[0].unit;
-    product.tags = tags;
-    product.images = images;
-    product.discount = discount || 0;
-    product.vendor = vendor;
-    product.bestBeforeDays = bestBeforeDays;
-    product.isAvailable = isAvailable !== undefined ? isAvailable : product.isAvailable;
-    product.isFeatured = isFeatured !== undefined ? isFeatured : product.isFeatured;
-    product.meta = meta;
-
-    // Save the updated product
-    await product.save();
 
     res.status(200).json({
       success: true,
       message: "Product updated successfully.",
-      product
+      product: updatedProduct,
     });
   } catch (error) {
     console.error("Error updating product:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error occurred while updating the product."
+      message: "Internal server error occurred while updating the product.",
     });
   }
 };
@@ -311,9 +388,10 @@ export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findByIdAndDelete(id);
-
-    // If the product is not found, return a 404 error
+    // Find the product first to obtain its image URLs before deletion.
+    const product = await Product.findById(id);
+    
+    // If the product is not found, return a 404 error.
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -321,13 +399,35 @@ export const deleteProduct = async (req, res) => {
       });
     }
 
-    // Return a success message after the product is deleted
+    // Delete images from Cloudinary if any exist.
+    if (product.images && product.images.length > 0) {
+      for (const imageUrl of product.images) {
+        // Cloudinary URLs are typically in the form:
+        // https://res.cloudinary.com/<cloud_name>/image/upload/v<version>/<public_id>.<extension>
+        // The following regex extracts the public_id from such URLs.
+        const regex = /\/upload\/(?:v\d+\/)?([^\.]+)/;
+        const match = imageUrl.match(regex);
+        if (match && match[1]) {
+          const publicId = match[1]; // extracted public_id
+          try {
+            await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+          } catch (err) {
+            console.error("Error deleting image from Cloudinary:", err);
+            // Optionally, you could choose to continue or return an error response.
+          }
+        }
+      }
+    }
+
+    // Delete the product document from the database.
+    await Product.findByIdAndDelete(id);
+
+    // Return a success message after deletion.
     res.json({
       success: true,
-      message: "Product deleted successfully."
+      message: "Product deleted successfully and images removed from Cloudinary."
     });
   } catch (error) {
-    // Handle any unexpected errors
     console.error("Error deleting product:", error);
     res.status(500).json({
       success: false,
