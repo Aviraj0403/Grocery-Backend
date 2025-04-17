@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Cart from '../models/cart.model.js';
-import Order from '../models/order.model.js';
+import users from '../models/user.model.js';
+import orders from '../models/order.model.js';
 import Product from '../models/product.model.js';
 
 /**
@@ -28,7 +29,7 @@ export const placeOrderFromCart = async (req, res, next) => {
       totalAmount += item.selectedVariant.price * item.quantity;
     }
 
-    const order = await Order.create({
+    const order = await orders.create({
       user: userId,
       items: cart.items,
       shippingAddress: req.body.shippingAddress,
@@ -54,11 +55,11 @@ export const placeOrderFromCart = async (req, res, next) => {
  */
 export const getUserOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user.id })
+    const order1 = await orders.find({ user: req.user.id })
       .populate('items.product', 'name images')
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({ success: true, orders });
+    return res.status(200).json({ success: true, order1 });
   } catch (error) {
     console.error('GetUserOrders Error:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch orders' });
@@ -72,7 +73,7 @@ export const getUserOrders = async (req, res) => {
  */
 export const getUserOrderById = async (req, res) => {
   try {
-    const order = await Order.findOne({ _id: req.params.id, user: req.user.id })
+    const order = await orders.findOne({ _id: req.params.id, user: req.user.id })
       .populate('items.product', 'name images');
 
     if (!order) {
@@ -92,14 +93,15 @@ export const getUserOrderById = async (req, res) => {
  */
 export const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find()
+    const allOrders = await orders.find()
       .populate('user', 'userName email')
       .populate('items.product', 'name images')
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({ success: true, orders });
+    return res.status(200).json({ success: true, orders: allOrders });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch all orders' });
+    console.error("Get All Orders Error:", error); // ✅ Log actual error
+    return res.status(500).json({ success: false, message: 'Failed to fetch all orders', error: error.message });
   }
 };
 
@@ -112,7 +114,7 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const { orderStatus, paymentStatus } = req.body;
 
-    const order = await Order.findById(req.params.id);
+    const order = await orders.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     if (orderStatus) order.orderStatus = orderStatus;
@@ -133,7 +135,7 @@ export const updateOrderStatus = async (req, res) => {
  */
 export const deleteOrder = async (req, res) => {
   try {
-    const deleted = await Order.findByIdAndDelete(req.params.id);
+    const deleted = await orders.findByIdAndDelete(req.params.id);
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
