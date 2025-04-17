@@ -7,12 +7,13 @@ import {
   updateOrderStatus,
   deleteOrder
 } from '../controllers/order.controller.js';
+import { verifyToken } from '../middlewares/verifyToken.js';
 
 
 const router = express.Router();
 
 // ========== USER ROUTES ==========
-router.post('/placeOrderFromCart', placeOrderFromCart);                // Place order from cart
+router.post('/placeOrderFromCart', verifyToken, placeOrderFromCart);                // Place order from cart
 router.get('/getUserOrders',  getUserOrders);                    // Get logged-in user's orders
 router.get('/getUserOrderById/:id', getUserOrderById);                // Get one order by ID
 

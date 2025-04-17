@@ -3,11 +3,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const secret = process.env.JWTSECRET;
+const secret = process.env.ACCESS_TOKEN_SECRET; 
 
 export const verifyToken = (req, res, next) => {
-  console.log(" Verifying token...");
-  const token = req.cookies?.jwt;
+  console.log("Verifying token...");
+
+  // Try to get token from cookie OR Authorization header
+  const cookieToken = req.cookies?.jwt;
+  const headerToken = req.headers.authorization?.split(" ")[1];
+
+  const token = cookieToken || headerToken;
 
   if (!token) {
     return res.status(401).json({
@@ -16,7 +21,7 @@ export const verifyToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);  // Corrected
 
     if (!decoded?.data) {
       return res.status(401).json({

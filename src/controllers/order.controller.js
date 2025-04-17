@@ -10,6 +10,9 @@ import Product from '../models/product.model.js';
  */
 export const placeOrderFromCart = async (req, res, next) => {
   try {
+    // Ensure that the user is authenticated
+    console.log("User ID from token:", req.user.id); // Debugging token data
+
     const userId = req.user.id;
 
     const cart = await Cart.findOne({ user: userId }).populate('items.product');
