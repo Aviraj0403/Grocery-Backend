@@ -1,4 +1,5 @@
 import Product from "../models/product.model.js";
+import { getUsersByRole } from '../services/user.service.js';
 
 export const adminGetAllProducts = async (req, res) => {
   try {
@@ -48,3 +49,37 @@ export const adminGetAllProducts = async (req, res) => {
     });
   }
 };
+export const getAllCustomers = async (req, res) => {
+  try {
+    const users = await getUsersByRole('customer');
+    return res.status(200).json({
+      success: true,
+      message: 'Customers fetched successfully',
+      data: users,
+    });
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch customers',
+    });
+  }
+};
+
+export const getAllAdmins = async (req, res) => {
+  try {
+    const users = await getUsersByRole('admin');
+    return res.status(200).json({
+      success: true,
+      message: 'Admins fetched successfully',
+      data: users,
+    });
+  } catch (error) {
+    console.error('Error fetching admins:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch admins',
+    });
+  }
+};
+
