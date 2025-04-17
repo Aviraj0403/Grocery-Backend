@@ -5,6 +5,7 @@ import userAuthRoutes from './routers/userAuth.routes.js';
 import categoryRoutes from './routers/category.routes.js';
 import productRoutes from './routers/product.routes.js';
 import adminRoutes from './routers/adminAuth.routes.js';
+import orderRoutes from './routers/order.routes.js';
 import {logSessionActivity} from './middlewares/logSessionActivity.js';
 import cors from 'cors';
 const app = express();  
@@ -36,8 +37,9 @@ app.use('/api', userAuthRoutes);
 app.use('/api', productRoutes);
 app.use('/api',categoryRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', orderRoutes);
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  res.send('Hello AviRaj!');
 });
 // Add your routes here
 
