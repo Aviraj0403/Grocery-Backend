@@ -8,13 +8,19 @@ import Product from '../models/product.model.js';
  */
 export const getUserCart = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ user: req.user.id }).populate('items.product', 'name images');
-    res.status(200).json({ success: true, cart: cart || { user: req.user.id, items: [] } });
+    const cart = await Cart.findOne({ user: req.user.id })
+      .populate('items.product', 'name images brand variants slug');
+
+    res.status(200).json({
+      success: true,
+      cart: cart || { user: req.user.id, items: [] }
+    });
   } catch (error) {
     console.error('Get Cart Error:', error);
     res.status(500).json({ success: false, message: 'Failed to get cart' });
   }
 };
+
 
 /**
  * @desc Add or update item in cart
