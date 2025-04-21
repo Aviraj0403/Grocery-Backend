@@ -31,7 +31,7 @@ export async function generateToken(res, userDetails) {
   const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "None" : "Lax", // 👈 important for localhost
+    sameSite: isProduction ? "None" : "Lax", 
   };
 
   res.cookie("accessToken", accessToken, {
