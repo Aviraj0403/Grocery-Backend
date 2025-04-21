@@ -6,7 +6,7 @@ dotenv.config();
 const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET || process.env.JWTSECRET;
 const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET || "YourRefreshTokenSecret";
 
-const isProduction = process.env.NODE_ENV === "production";
+// const isProduction = process.env.NODE_ENV === "production";
 
 /**
  * Generates access + refresh tokens and sets them in secure HTTP-only cookies.
@@ -30,8 +30,8 @@ export async function generateToken(res, userDetails) {
   // 🔐 Cookie options (secure only in production)
   const cookieOptions = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "None" : "Lax", 
+    secure: true,
+    sameSite:  "None",
   };
 
   res.cookie("accessToken", accessToken, {
