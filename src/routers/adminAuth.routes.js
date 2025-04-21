@@ -1,5 +1,6 @@
 import express from "express";
 import { adminGetAllProducts,getAllAdmins,getAllCustomers } from "../controllers/admin.controller.js";
+import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 

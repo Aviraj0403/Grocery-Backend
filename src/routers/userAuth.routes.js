@@ -28,7 +28,7 @@ router.post('/user/googleLogin', googleLogin);
 
 // Protected Routes
 router.post('/user/logout', verifyToken, logout);
-router.get('/user/profile', verifyToken, profile);
+router.get('/user/profile', profile);
 router.get('/me', verifyToken, authMe);
 router.post('/auth/refresh-token', refreshToken);
 

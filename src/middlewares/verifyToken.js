@@ -9,7 +9,9 @@ export const verifyToken = (req, res, next) => {
   console.log("Verifying token...");
 
   // Try to get token from cookie OR Authorization header
-  const cookieToken = req.cookies?.jwt;
+  // const cookieToken = req.cookies?.jwt;
+  const cookieToken = req.cookies?.accessToken;
+
   const headerToken = req.headers.authorization?.split(" ")[1];
 
   const token = cookieToken || headerToken;

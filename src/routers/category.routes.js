@@ -7,6 +7,8 @@ import {
   deleteCategory
 } from '../controllers/category.controller.js';
 
+import { verifyToken } from '../middlewares/verifyToken.js';  
+
 const router = express.Router();
 
 router.post("/createCategory", createCategory);
