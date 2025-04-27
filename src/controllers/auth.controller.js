@@ -4,9 +4,11 @@ import { generateToken } from '../utils/generateJWTToken.js';
 import hashPassword from '../utils/hashPassword.js';
 import generateOTP from '../utils/generateOTP.js';
 import sendMailer from '../utils/emailService.js';
+import cloudinary from '../config/cloudinaryConfig.js';
 import { sendOtpViaSms } from "../utils/sendSms.js";
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+
 import { OAuth2Client } from 'google-auth-library';
 dotenv.config();
 
@@ -324,3 +326,82 @@ export const authMe = async (req, res) => {
     res.status(401).json({ message: "Failed to authenticate" });
   }
 };
+export const updateProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, phoneNumber, address } = req.body;
+    
+    const user = await users.findById(req.user.id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Update basic fields if provided
+    if (firstName !== undefined) user.firstName = firstName;
+    if (lastName !== undefined) user.lastName = lastName;
+    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+
+    // If Cloudinary avatar was uploaded in separate API, then update here too
+    if (req.file?.path) {
+      user.avatar = req.file.path;
+    } else if (req.body.avatar) {
+      // If avatar URL is passed manually
+      user.avatar = req.body.avatar;
+    }
+
+    // Update address (nested carefully)
+    if (address) {
+      user.address = {
+        ...user.address,   // keep old fields if not provided new
+        ...address         // overwrite with new fields
+      };
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      userProfile: {
+        id: user._id,
+        userName: user.userName,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phoneNumber: user.phoneNumber,
+        address: user.address,
+        avatar: user.avatar,
+      }
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+export const uploadAvatar = async (req, res) => {
+  try {
+    const user = await users.findById(req.user.id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Upload file to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "avatars",
+      width: 300,
+      crop: "scale"
+    });
+
+    // Save Cloudinary URL in DB
+    user.avatar = result.secure_url;
+    await user.save();
+
+    // Delete temp file
+    fs.unlinkSync(req.file.path);
+
+    res.status(200).json({
+      message: "Avatar uploaded successfully",
+      avatarUrl: result.secure_url,
+    });
+  } catch (error) {
+    console.error("Upload Avatar Error:", error);
+    res.status(500).json({ message: "Failed to upload avatar" });
+  }
+};
+

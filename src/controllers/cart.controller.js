@@ -11,10 +11,29 @@ export const getUserCart = async (req, res) => {
     const cart = await Cart.findOne({ user: req.user.id })
       .populate('items.product', 'name images brand variants slug');
 
+    // res.status(200).json({
+    //   success: true,
+    //   cart: cart || { user: req.user.id, items: [] }
+    // });
     res.status(200).json({
       success: true,
-      cart: cart || { user: req.user.id, items: [] }
+      cart: cart
+        ? {
+            user: cart.user,
+            updatedAt: cart.updatedAt,
+            items: cart.items.map(item => ({
+              productId: item.product._id,
+              name: item.product.name,
+              brand: item.product.brand,
+              slug: item.product.slug,
+              image: item.product.images[0], // First image as default
+              selectedVariant: item.selectedVariant,
+              quantity: item.quantity
+            }))
+          }
+        : { user: req.user.id, items: [] }
     });
+    
   } catch (error) {
     console.error('Get Cart Error:', error);
     res.status(500).json({ success: false, message: 'Failed to get cart' });

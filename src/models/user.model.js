@@ -9,15 +9,15 @@ const userSchema = new mongoose.Schema(
     firstName: String,
     lastName: String,
     phoneNumber: {
-      type: String, 
-      unique: true,   // This already creates an index
-      sparse: true,   // Makes the index sparse (for null or undefined values)
+      type: String,
+      unique: true,
+      sparse: true,
     },
     email: {
       type: String,
       required: true,
-      unique: true,   // This already creates an index
-      sparse: true,   // Makes the index sparse
+      unique: true,
+      sparse: true,
     },
     password: {
       type: String,
@@ -37,12 +37,23 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    resetOTP: { 
-      type: String
-     },
-    otpExpiry: { 
-      type: Date
-     },
+    avatar: {
+      type: String, 
+      default: "", 
+      trim: true,
+    },
+
+    // 👇 New Address Section
+    address: {
+      street: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      postalCode: { type: String, trim: true },
+      country: { type: String, trim: true, default: 'India' },
+    },
+
+    resetOTP: { type: String },
+    otpExpiry: { type: Date },
     resetPasswordToken: String,
     resetPasswordExpires: Date,
   },
@@ -50,4 +61,5 @@ const userSchema = new mongoose.Schema(
 );
 
 const users = mongoose.model('users', userSchema);
+
 export default users;

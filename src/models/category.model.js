@@ -9,7 +9,13 @@ const categorySchema = new mongoose.Schema({
   parentCategory: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Category",
-    default: null, // Root categories have null
+    default: null,
+    validate: {
+      validator: function(v) {
+        return v === null || mongoose.Types.ObjectId.isValid(v);
+      },
+      message: props => `${props.value} is not a valid ObjectId!`
+    }
   },
 
   type: {
@@ -20,7 +26,18 @@ const categorySchema = new mongoose.Schema({
 
   displayOrder: { type: Number, default: 0 },
 
-  image: { type: String }, // Icon/banner path
+  image: {
+    type: [String],
+    required: true,
+    validate: {
+      validator: function (v) {
+        return Array.isArray(v) && v.length === 1;
+      },
+      message: 'Category must have exactly 1 image.'
+    }
+  },
+
+  publicId: { type: String, default: null },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
