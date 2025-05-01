@@ -145,6 +145,54 @@ export const getAllCategories = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// GET /api/categories/main
+export const getMainCategories = async (req, res) => {
+  try {
+    const mains = await Category
+      .find({ parentCategory: null })   // all roots
+      .sort({ displayOrder: 1 })
+      .lean();
+    res.json({ success: true, categories: mains });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+// GET /api/categories/:id/details
+export const getCategoryDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // 1) pull direct subs
+    const subcats = await Category
+      .find({ parentCategory: id })
+      .sort({ displayOrder: 1 })
+      .lean();
+
+    // 2) assemble an array of category IDs to include:
+    //    – the main one, plus its direct sub‐IDs
+    const catIds = [ id, ...subcats.map(c => c._id) ];
+
+    // 3) fetch products whose category OR subCategory is in that list
+    const products = await Product
+      .find({
+        $or: [
+          { category:   { $in: catIds } },
+          { subCategory:{ $in: catIds } }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      success:      true,
+      subcategories: subcats,
+      products
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 // GET SINGLE CATEGORY
 export const getCategory = async (req, res) => {

@@ -435,3 +435,14 @@ export const deleteProduct = async (req, res) => {
     });
   }
 };
+// New API: Fetch Products by Category
+export const getProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.query;
+    const products = await Product.find({ category }).limit(12);
+    res.status(200).json({ success: true, products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching products by category" });
+  }
+};
+

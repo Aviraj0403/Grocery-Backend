@@ -5,7 +5,8 @@ import {
   getAllProducts,
   getProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  getProductsByCategory,
 } from '../controllers/product.controller.js';
 import  upload  from '../middlewares/upload.js'; // Assuming you have a multer setup in middlewares/multer.js
 import { verifyToken } from '../middlewares/verifyToken.js';
@@ -17,6 +18,6 @@ router.get("/getAllProducts",getAllProducts);
 router.get("/getProduct/:id",getProduct);
 router.put("/updateProduct/:productId",updateProduct)
 router.delete("/deleteProduct/:id",deleteProduct);
-
+router.get('/products/category', getProductsByCategory);
 
 export default router;
