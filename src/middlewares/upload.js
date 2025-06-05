@@ -23,19 +23,32 @@ const storage = multer.diskStorage({
 });
 
 // Set up Multer with storage configuration
+// const upload = multer({
+//   storage,
+//   limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5 MB
+//   fileFilter: (req, file, cb) => {
+//     // Allowed file types (jpeg, jpg, png, gif, avif)
+//     const fileTypes = /jpeg|jpg|png|gif|avif/;
+//     const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+//     const mimetype = fileTypes.test(file.mimetype);
+
+//     if (extname && mimetype) {
+//       return cb(null, true); // If valid file type, allow the upload
+//     } else {
+//       cb(new Error('Error: File type not supported!')); // Error for unsupported file types
+//     }
+//   }
+// });
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5 MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    // Allowed file types (jpeg, jpg, png, gif, avif)
-    const fileTypes = /jpeg|jpg|png|gif|avif/;
-    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = fileTypes.test(file.mimetype);
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/avif'];
 
-    if (extname && mimetype) {
-      return cb(null, true); // If valid file type, allow the upload
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
     } else {
-      cb(new Error('Error: File type not supported!')); // Error for unsupported file types
+      cb(new Error(`File type not supported! Received: ${file.mimetype}`));
     }
   }
 });

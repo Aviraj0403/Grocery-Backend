@@ -31,7 +31,7 @@ router.post('/user/googleLogin', googleLogin);
 
 // Protected Routes
 router.post('/user/logout', verifyToken, logout);
-router.get('/user/profile', profile);
+router.get('/user/profile', verifyToken,profile);
 router.patch('/user/updateProfile', verifyToken, updateProfile);
 router.post('/user/uploadAvatar', verifyToken, upload.single('avatar'), uploadAvatar);
 

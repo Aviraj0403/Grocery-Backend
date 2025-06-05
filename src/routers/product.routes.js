@@ -15,6 +15,7 @@ const router = express.Router();
 router.post("/createProduct",createProduct);
 router.post('/products/:productId/images', upload.array('files'), addProductImages);
 router.get("/getAllProducts",getAllProducts);
+router.get('/products', getAllProducts); // ✅ handles ?category= in query
 router.get("/getProduct/:id",getProduct);
 router.put("/updateProduct/:productId",updateProduct)
 router.delete("/deleteProduct/:id",deleteProduct);

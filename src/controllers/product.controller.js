@@ -231,27 +231,31 @@ export const addProductImages = async (req, res) => {
 // Get All Products
 export const getAllProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "" } = req.query; // Optional query params for pagination and search
+    const { page = 1, limit = 10, search = "", category } = req.query;
 
-    // Calculate skip and limit for pagination
     const skip = (page - 1) * limit;
-    
-    // Search condition (if search query is provided)
-    const searchCondition = search
-      ? { $text: { $search: search } } // Full-text search on text fields like name, tags, etc.
-      : {};
 
-    // Fetch products with optional search, pagination, and sorting by createdAt (descending)
-    const products = await Product.find(searchCondition)
+    // Build dynamic query
+    const query = {};
+
+    // If search term provided, add text search condition
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    // If category filter is provided
+    if (category) {
+      query.category = category; // assumes category is sent as ObjectId string
+    }
+
+    const products = await Product.find(query)
       .populate("category subCategory")
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
 
-    // Count total number of products to calculate total pages
-    const totalProducts = await Product.countDocuments(searchCondition);
+    const totalProducts = await Product.countDocuments(query);
 
-    // Prepare response with pagination info
     res.json({
       success: true,
       products,
@@ -267,6 +271,7 @@ export const getAllProducts = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 // Get Single Product
 export const getProduct = async (req, res) => {
   try {
