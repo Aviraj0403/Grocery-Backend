@@ -11,22 +11,20 @@ export const getUserCart = async (req, res) => {
     const cart = await Cart.findOne({ user: req.user.id })
       .populate('items.product', 'name images brand variants slug');
 
-    // res.status(200).json({
-    //   success: true,
-    //   cart: cart || { user: req.user.id, items: [] }
-    // });
+    const validItems = (cart?.items || []).filter(item => item.product);
+
     res.status(200).json({
       success: true,
       cart: cart
         ? {
             user: cart.user,
             updatedAt: cart.updatedAt,
-            items: cart.items.map(item => ({
+            items: validItems.map(item => ({
               productId: item.product._id,
               name: item.product.name,
               brand: item.product.brand,
               slug: item.product.slug,
-              image: item.product.images[0], // First image as default
+              image: item.product.images[0],
               selectedVariant: item.selectedVariant,
               quantity: item.quantity
             }))
@@ -41,6 +39,7 @@ export const getUserCart = async (req, res) => {
 };
 
 
+
 /**
  * @desc Add or update item in cart
  * @route POST /api/cart
@@ -49,8 +48,25 @@ export const getUserCart = async (req, res) => {
 export const addToCart = async (req, res) => {
   try {
     const { productId, selectedVariant, quantity } = req.body;
-    if (!productId || !selectedVariant || quantity <= 0) {
-      return res.status(400).json({ success: false, message: 'Invalid cart input' });
+
+    // ✅ Debug logs
+    console.log("🛒 Received payload:", { productId, selectedVariant, quantity });
+    console.log("👤 Authenticated user:", req.user);
+
+    // ✅ Validate critical fields explicitly
+    if (
+      !productId ||
+      !selectedVariant ||
+      !selectedVariant.unit ||
+      typeof selectedVariant.unit !== 'string' ||
+      selectedVariant.unit.trim() === '' ||
+      quantity <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid cart input',
+        debug: { productId, selectedVariant, quantity }
+      });
     }
 
     let cart = await Cart.findOne({ user: req.user.id });
@@ -58,17 +74,17 @@ export const addToCart = async (req, res) => {
       cart = new Cart({ user: req.user.id, items: [] });
     }
 
-    // Check if product + variant already in cart
+    // ✅ Match by product + selectedVariant.unit (not id)
     const index = cart.items.findIndex(item =>
       item.product.toString() === productId &&
       item.selectedVariant.unit === selectedVariant.unit
     );
 
     if (index > -1) {
-      // Update quantity
+      // Update quantity if exists
       cart.items[index].quantity += quantity;
     } else {
-      // Push new item
+      // Push new valid item
       cart.items.push({
         product: productId,
         selectedVariant,
@@ -78,13 +94,23 @@ export const addToCart = async (req, res) => {
 
     cart.updatedAt = new Date();
     await cart.save();
-    res.status(200).json({ success: true, message: 'Cart updated', cart });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cart updated',
+      cart
+    });
 
   } catch (error) {
-    console.error('Add to Cart Error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update cart' });
+    console.error('❌ Add to Cart Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update cart'
+    });
   }
 };
+
+
 
 /**
  * @desc Update item quantity in cart

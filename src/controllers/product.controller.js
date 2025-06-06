@@ -229,29 +229,28 @@ export const addProductImages = async (req, res) => {
 // };
 
 // Get All Products
+// controllers/product.controller.js
+
 export const getAllProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "", category } = req.query;
+    const { page = 1, limit = 8, search = "", category } = req.query;
 
     const skip = (page - 1) * limit;
 
-    // Build dynamic query
     const query = {};
 
-    // If search term provided, add text search condition
     if (search) {
       query.$text = { $search: search };
     }
 
-    // If category filter is provided
     if (category) {
-      query.category = category; // assumes category is sent as ObjectId string
+      query.category = category;
     }
 
     const products = await Product.find(query)
       .populate("category subCategory")
-      .skip(skip)
-      .limit(parseInt(limit))
+      .skip(Number(skip))
+      .limit(Number(limit))
       .sort({ createdAt: -1 });
 
     const totalProducts = await Product.countDocuments(query);
@@ -261,9 +260,9 @@ export const getAllProducts = async (req, res) => {
       products,
       pagination: {
         total: totalProducts,
-        page: parseInt(page),
+        page: Number(page),
         totalPages: Math.ceil(totalProducts / limit),
-        limit: parseInt(limit),
+        limit: Number(limit),
       },
     });
   } catch (error) {
@@ -271,6 +270,7 @@ export const getAllProducts = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // Get Single Product
 export const getProduct = async (req, res) => {
