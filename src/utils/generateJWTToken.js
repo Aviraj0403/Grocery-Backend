@@ -6,7 +6,8 @@ dotenv.config();
 const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET || process.env.JWTSECRET;
 const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET || "YourRefreshTokenSecret";
 
-const isProduction = process.env.NODE_ENV === "development";
+// Correct isProduction check: true when in production mode
+const isProduction = process.env.NODE_ENV === "production";
 console.log("isProduction:", isProduction);
 
 /**
@@ -28,11 +29,12 @@ export async function generateToken(res, userDetails) {
     { expiresIn: "7d" }
   );
 
-  // 🔐 Cookie options (secure only in production)
+  // 🔐 Cookie options (secure only in production, with path)
   const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "None" : "Lax",
+    path: "/",   // IMPORTANT: must include path for clearing cookie later
   };
 
   res.cookie("accessToken", accessToken, {

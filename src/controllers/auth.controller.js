@@ -296,15 +296,23 @@ export const googleLogin = async (req, res) => {
 // Logout
 export const logout = async (req, res) => {
   try {
-    res.clearCookie("jwt", {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-    });
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      path: "/",
+    };
+
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
+
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+
+
 
 // Profile
 export const profile = async (req, res) => {

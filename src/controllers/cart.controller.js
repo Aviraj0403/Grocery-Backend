@@ -114,34 +114,64 @@ export const addToCart = async (req, res) => {
  * @route PUT /api/cart
  * @access Private
  */
+
 export const updateCartItem = async (req, res) => {
   try {
     const { productId, unit, quantity } = req.body;
-    const cart = await Cart.findOne({ user: req.user.id });
-    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
 
-    const index = cart.items.findIndex(item =>
-      item.product.toString() === productId &&
-      item.selectedVariant.unit === unit
-    );
-
-    if (index === -1) return res.status(404).json({ success: false, message: 'Item not found' });
-
-    if (quantity > 0) {
-      cart.items[index].quantity = quantity;
-    } else {
-      cart.items.splice(index, 1);
+    if (!productId || !unit || typeof quantity !== 'number' || quantity < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid input: productId, unit and quantity (>=0) are required',
+      });
     }
 
-    cart.updatedAt = new Date();
-    await cart.save();
-    res.status(200).json({ success: true, message: 'Cart item updated', cart });
+    const normalizedUnit = unit.trim().toLowerCase();
 
+    // Use MongoDB update with positional operator to update item quantity or remove it
+    const updateQuery = {
+      user: req.user.id,
+      'items.product': productId,
+      'items.selectedVariant.unit': { $regex: new RegExp(`^${normalizedUnit}$`, 'i') }, // case-insensitive match
+    };
+
+    let updateOperation;
+    if (quantity === 0) {
+      // Remove the item from the array
+      updateOperation = {
+        $pull: {
+          items: {
+            product: productId,
+            'selectedVariant.unit': { $regex: new RegExp(`^${normalizedUnit}$`, 'i') },
+          },
+        },
+        $set: { updatedAt: new Date() },
+      };
+    } else {
+      // Update quantity of the item
+      updateOperation = {
+        $set: {
+          'items.$.quantity': quantity,
+          updatedAt: new Date(),
+        },
+      };
+    }
+
+    const result = await Cart.updateOne(updateQuery, updateOperation);
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Cart item not found' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Cart item updated successfully' });
   } catch (error) {
     console.error('Update Cart Error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update cart item' });
+    return res.status(500).json({ success: false, message: 'Failed to update cart item' });
   }
 };
+
+
+
 
 /**
  * @desc Remove item from cart
@@ -150,23 +180,38 @@ export const updateCartItem = async (req, res) => {
  */
 export const removeCartItem = async (req, res) => {
   try {
-    const { productId, unit } = req.body;
-    const cart = await Cart.findOne({ user: req.user.id });
-    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
+    const { productId, unit } = req.query;
 
-    cart.items = cart.items.filter(item =>
-      !(item.product.toString() === productId && item.selectedVariant.unit === unit)
+    if (!productId || !unit) {
+      return res.status(400).json({ success: false, message: 'Missing productId or unit' });
+    }
+
+    const cart = await Cart.findOneAndUpdate(
+      { user: req.user.id },
+      {
+        $pull: {
+          items: {
+            product: productId,
+            'selectedVariant.unit': unit,
+          },
+        },
+        $set: { updatedAt: new Date() },
+      },
+      { new: true }
     );
 
-    cart.updatedAt = new Date();
-    await cart.save();
-    res.status(200).json({ success: true, message: 'Item removed from cart', cart });
+    if (!cart) {
+      return res.status(404).json({ success: false, message: 'Cart not found' });
+    }
 
+    res.json({ success: true, message: 'Item removed from cart', cart });
   } catch (error) {
     console.error('Remove Item Error:', error);
     res.status(500).json({ success: false, message: 'Failed to remove cart item' });
   }
 };
+
+
 
 /**
  * @desc Clear entire cart
