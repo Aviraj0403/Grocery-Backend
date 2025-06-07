@@ -4,7 +4,6 @@ import { uploadImageToCloudinary } from '../controllers/imageUploadController.js
 import { unlink } from 'fs/promises'; // Use async unlink for safer file deletion
 import fs from 'fs'; // Ensure fs is imported
 
-// CREATE CATEGORY
 export const createCategory = async (req, res) => {
   try {
     const {
@@ -15,7 +14,6 @@ export const createCategory = async (req, res) => {
       displayOrder
     } = req.body;
 
-    // Validate name
     if (!name) {
       return res.status(400).json({ success: false, message: "Name is required." });
     }
@@ -28,30 +26,27 @@ export const createCategory = async (req, res) => {
       slug = `${baseSlug}-${count++}`;
     }
 
-    // Handle image upload through Cloudinary
-    await uploadImageToCloudinary(req, res, async () => {
-      const imageUrl = req.cloudinaryImageUrl || ''; // Get image URL from the uploaded file
+    const imageUrl = req.cloudinaryImageUrl || '';
+    const publicId = req.cloudinaryPublicId || '';
 
-      // Create a new category
-      const newCategory = await Category.create({
-        name,
-        slug,
-        description,
-        parentCategory: (type === 'Sub' && !parentCategory) ? null : parentCategory,
-        type,
-        displayOrder,
-        image: imageUrl ? [imageUrl] : [],
-        publicId: req.cloudinaryPublicId || '', // Store Cloudinary public_id for future deletion
-      });
-
-      console.log(newCategory);
-      res.status(201).json({ success: true, category: newCategory });
+    const newCategory = await Category.create({
+      name,
+      slug,
+      description,
+      parentCategory: (type === 'Sub' && !parentCategory) ? null : parentCategory,
+      type,
+      displayOrder,
+      image: imageUrl ? [imageUrl] : [],
+      publicId,
     });
+
+    res.status(201).json({ success: true, category: newCategory });
   } catch (error) {
     console.error("Error creating category:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // UPDATE CATEGORY
 export const updateCategory = async (req, res) => {
