@@ -8,35 +8,32 @@ import Product from '../models/product.model.js';
  */
 export const getUserCart = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ user: req.user.id })
-      .populate('items.product', 'name images brand variants slug');
+    const cart = await Cart.findOne({ user: req.user.id }).populate('items.product', 'name images brand variants slug');
 
     const validItems = (cart?.items || []).filter(item => item.product);
 
+    const cartItems = validItems.map(item => ({
+      productId: item.product._id,
+      name: item.product.name,
+      brand: item.product.brand,
+      slug: item.product.slug,
+      image: item.product.images[0],
+      selectedVariant: item.selectedVariant,
+      quantity: item.quantity
+    }));
+
     res.status(200).json({
       success: true,
-      cart: cart
-        ? {
-            user: cart.user,
-            updatedAt: cart.updatedAt,
-            items: validItems.map(item => ({
-              productId: item.product._id,
-              name: item.product.name,
-              brand: item.product.brand,
-              slug: item.product.slug,
-              image: item.product.images[0],
-              selectedVariant: item.selectedVariant,
-              quantity: item.quantity
-            }))
-          }
-        : { user: req.user.id, items: [] }
+      cartItems, // ✅ Renamed key
+      userId: cart?.user || req.user.id,
+      updatedAt: cart?.updatedAt || null
     });
-    
   } catch (error) {
     console.error('Get Cart Error:', error);
     res.status(500).json({ success: false, message: 'Failed to get cart' });
   }
 };
+
 
 
 
