@@ -8,6 +8,7 @@ import adminRoutes from './routers/adminAuth.routes.js';
 import cartRoutes from './routers/cart.routes.js';
 import orderRoutes from './routers/order.routes.js';
 import userRoutes from './routers/user.routes.js';
+import offerRoutes from './routers/offer.routes.js';
 import {logSessionActivity} from './middlewares/logSessionActivity.js';
 import cors from 'cors';
 const app = express();  
@@ -42,6 +43,7 @@ app.use('/api', adminRoutes);
 app.use('/api', orderRoutes);
 app.use('/api', cartRoutes);
 app.use("/api", userRoutes);
+app.use('/api', offerRoutes);
 app.get('/', (req, res) => {
   res.send('Hello AviRaj!');
 });
