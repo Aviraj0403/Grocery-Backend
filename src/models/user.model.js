@@ -43,14 +43,24 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // 👇 New Address Section
-    address: {
-      street: { type: String, trim: true },
-      city: { type: String, trim: true },
-      state: { type: String, trim: true },
-      postalCode: { type: String, trim: true },
-      country: { type: String, trim: true, default: 'India' },
-    },
+   addresses: [
+      {
+        _id: false,
+        id: {
+          type: mongoose.Types.ObjectId,
+          default: () => new mongoose.Types.ObjectId(),
+        },
+        label: { type: String, trim: true, default: "Home" },
+        phoneNumber: { type: String, trim: true },
+        street: { type: String, trim: true },
+        city: { type: String, trim: true },
+        state: { type: String, trim: true },
+        postalCode: { type: String, trim: true },
+        country: { type: String, trim: true, default: 'India' },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
+
 
     resetOTP: { type: String },
     otpExpiry: { type: Date },
