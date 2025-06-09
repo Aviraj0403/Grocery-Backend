@@ -1,29 +1,34 @@
 import mongoose from 'mongoose';
-import  Offer  from '../models/offer.model.js';
+import Offer from '../models/offer.model.js';
 
+// Create offer (promo code or auto offer)
 export const createOffer = async (req, res, next) => {
   try {
-    const { name, code, discountPercentage, startDate, endDate, status, applyAutomatically } = req.body;
-
-    // Validate required fields
-    if (!name || discountPercentage === undefined || !startDate || !endDate) {
-      return res.status(400).json({ message: 'Name, discountPercentage, startDate, and endDate are required.' });
-    }
-
-    // Create the new offer
-    const newOffer = new Offer({
+    const {
       name,
-      code: code ? code.toUpperCase().trim() : undefined, // promo code is optional
+      code,
       discountPercentage,
+      maxDiscountAmount,
       startDate,
       endDate,
       status,
-      applyAutomatically: applyAutomatically ?? false,
+      applyAutomatically,
+      maxUsageCount
+    } = req.body;
+
+    const newOffer = new Offer({
+      name,
+      code: code ? code.toUpperCase().trim() : undefined,
+      discountPercentage,
+      maxDiscountAmount,
+      startDate,
+      endDate,
+      status,
+      applyAutomatically,
+      maxUsageCount
     });
 
-    // Save the offer
     const savedOffer = await newOffer.save();
-
     return res.status(201).json({ message: 'Offer created successfully.', data: savedOffer.toObject() });
   } catch (error) {
     if (error.code === 11000 && error.keyPattern?.code) {
@@ -34,9 +39,8 @@ export const createOffer = async (req, res, next) => {
   }
 };
 
-
-// Get all offers - use lean for faster performance
-export const getAllOffers = async (req, res, next) => {
+// Get all offers
+export const getAllOffers = async (req, res) => {
   try {
     const offers = await Offer.find().sort({ createdAt: -1 }).lean();
     return res.status(200).json({ message: 'Offers retrieved successfully.', data: offers });
@@ -46,11 +50,10 @@ export const getAllOffers = async (req, res, next) => {
   }
 };
 
-// Get offer by ID - use lean
-export const getOfferById = async (req, res, next) => {
+// Get offer by ID
+export const getOfferById = async (req, res) => {
   try {
     const { id } = req.params;
-
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid offer ID.' });
     }
@@ -67,20 +70,18 @@ export const getOfferById = async (req, res, next) => {
   }
 };
 
-export const updateOffer = async (req, res, next) => {
+// Update offer
+export const updateOffer = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // Check if ID is a valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid offer ID.' });
     }
 
-    // Prevent updating the _id field
     if (updates._id) delete updates._id;
 
-    // Validate if the code is being updated and is unique
     if (updates.code) {
       const existingCode = await Offer.findOne({ code: updates.code.toUpperCase().trim() });
       if (existingCode && existingCode._id.toString() !== id) {
@@ -88,22 +89,11 @@ export const updateOffer = async (req, res, next) => {
       }
     }
 
-    // Validate dates if they are being updated
-    if (updates.startDate && updates.endDate) {
-      const startDate = new Date(updates.startDate);
-      const endDate = new Date(updates.endDate);
-      if (startDate >= endDate) {
-        return res.status(400).json({ message: 'Start date must be before end date.' });
-      }
-    }
-
-    // Update the offer with new data
     const updatedOffer = await Offer.findByIdAndUpdate(id, updates, {
       new: true,
-      runValidators: true, // Ensure that validation is run for the updated fields
+      runValidators: true
     }).lean();
 
-    // If no offer was found with the given ID
     if (!updatedOffer) {
       return res.status(404).json({ message: 'Offer not found.' });
     }
@@ -115,18 +105,15 @@ export const updateOffer = async (req, res, next) => {
   }
 };
 
-
-// Delete offer by ID - no lean (returns deleted document, not always needed)
-export const deleteOffer = async (req, res, next) => {
+// Delete offer
+export const deleteOffer = async (req, res) => {
   try {
     const { id } = req.params;
-
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid offer ID.' });
     }
 
     const deleted = await Offer.findByIdAndDelete(id).lean();
-
     if (!deleted) {
       return res.status(404).json({ message: 'Offer not found.' });
     }
@@ -138,11 +125,10 @@ export const deleteOffer = async (req, res, next) => {
   }
 };
 
-// Get active offers - use lean
-export const getActiveOffers = async (req, res, next) => {
+// Get active offers
+export const getActiveOffers = async (req, res) => {
   try {
     const currentDate = new Date();
-
     const activeOffers = await Offer.find({
       status: 'Active',
       startDate: { $lte: currentDate },
@@ -155,30 +141,27 @@ export const getActiveOffers = async (req, res, next) => {
     return res.status(500).json({ message: 'Internal server error.' });
   }
 };
-export const validatePromoCode = async (req, res, next) => {
-  try {
-    // Get the promo code from the URL parameter
-    const { code } = req.params;
 
+// Validate promo code
+export const validatePromoCode = async (req, res) => {
+  try {
+    const { code } = req.params;
     if (!code) {
       return res.status(400).json({ message: 'Promo code is required.' });
     }
 
     const currentDate = new Date();
-
-    // Query the Offer collection to find an active offer with the provided promo code
     const offer = await Offer.findOne({
-      code: code.toUpperCase().trim(),  // Make sure the code is in uppercase and trimmed
-      status: 'Active',                  // The offer should be active
-      startDate: { $lte: currentDate },  // The offer start date should be before or equal to current date
-      endDate: { $gte: currentDate },    // The offer end date should be after or equal to current date
+      code: code.toUpperCase().trim(),
+      status: 'Active',
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate },
     }).lean();
 
     if (!offer) {
       return res.status(404).json({ message: 'Invalid or expired promo code.' });
     }
 
-    // Return the offer info along with the discount percentage
     return res.status(200).json({
       message: 'Promo code is valid.',
       data: {
@@ -195,19 +178,19 @@ export const validatePromoCode = async (req, res, next) => {
     return res.status(500).json({ message: 'Internal server error.' });
   }
 };
-export const applyDiscount = async (req, res, next) => {
+
+// Apply promo code discount
+export const applyDiscount = async (req, res) => {
   try {
-    const { code, totalAmount } = req.body;  // Expect code and the total cart/order amount
+    const { code, totalAmount } = req.body;
 
     if (!code || !totalAmount) {
       return res.status(400).json({ message: 'Promo code and total amount are required.' });
     }
 
     const currentDate = new Date();
-
-    // Find offer with the given code that is active and within date range
     const offer = await Offer.findOne({
-      code: code.toUpperCase().trim(),  // Ensure promo code is uppercased and trimmed
+      code: code.toUpperCase().trim(),
       status: 'Active',
       startDate: { $lte: currentDate },
       endDate: { $gte: currentDate },
@@ -217,9 +200,14 @@ export const applyDiscount = async (req, res, next) => {
       return res.status(404).json({ message: 'Invalid or expired promo code.' });
     }
 
-    // Calculate the discount based on the discount percentage
-    const discountAmount = (offer.discountPercentage / 100) * totalAmount;
-    const finalAmount = totalAmount - discountAmount;  // Calculate final amount after discount
+    let discountAmount = (offer.discountPercentage / 100) * totalAmount;
+
+    // Apply max discount cap if applicable
+    if (offer.maxDiscountAmount !== null && discountAmount > offer.maxDiscountAmount) {
+      discountAmount = offer.maxDiscountAmount;
+    }
+
+    const finalAmount = totalAmount - discountAmount;
 
     return res.status(200).json({
       message: 'Promo code applied successfully.',
@@ -229,6 +217,7 @@ export const applyDiscount = async (req, res, next) => {
         offerDetails: {
           name: offer.name,
           discountPercentage: offer.discountPercentage,
+          maxDiscountAmount: offer.maxDiscountAmount ?? null,
         },
       },
     });
@@ -238,3 +227,23 @@ export const applyDiscount = async (req, res, next) => {
   }
 };
 
+// Get active promo code based offers
+export const getActivePromoCodeOffers = async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const promoCodeOffers = await Offer.find({
+      code: { $ne: null, $ne: '' },
+      status: 'Active',
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate }
+    }).lean();
+
+    return res.status(200).json({
+      message: 'Active promo code offers retrieved successfully.',
+      data: promoCodeOffers
+    });
+  } catch (error) {
+    console.error('Error fetching promo code offers:', error);
+    return res.status(500).json({ message: 'Internal server error.' });
+  }
+};
