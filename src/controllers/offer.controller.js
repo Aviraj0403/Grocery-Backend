@@ -126,21 +126,29 @@ export const deleteOffer = async (req, res) => {
 };
 
 // Get active offers
+// Get active offers
 export const getActiveOffers = async (req, res) => {
   try {
     const currentDate = new Date();
+
     const activeOffers = await Offer.find({
       status: 'Active',
       startDate: { $lte: currentDate },
       endDate: { $gte: currentDate },
-    }).lean();
+    })
+      .sort({ startDate: 1 }) // Show soonest starting offers first
+      .lean();
 
-    return res.status(200).json({ message: 'Active offers retrieved successfully.', data: activeOffers });
+    return res.status(200).json({
+      message: 'Active offers retrieved successfully.',
+      data: activeOffers,
+    });
   } catch (error) {
     console.error('Error fetching active offers:', error);
     return res.status(500).json({ message: 'Internal server error.' });
   }
 };
+
 
 // Validate promo code
 export const validatePromoCode = async (req, res) => {
@@ -228,11 +236,13 @@ export const applyDiscount = async (req, res) => {
 };
 
 // Get active promo code based offers
+// Get active promo code based offers
 export const getActivePromoCodeOffers = async (req, res) => {
   try {
     const currentDate = new Date();
+
     const promoCodeOffers = await Offer.find({
-      code: { $ne: null, $ne: '' },
+      code: { $nin: [null, ''] }, // FIXED: Correct way to check not null or empty
       status: 'Active',
       startDate: { $lte: currentDate },
       endDate: { $gte: currentDate }
@@ -247,3 +257,4 @@ export const getActivePromoCodeOffers = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error.' });
   }
 };
+

@@ -20,6 +20,7 @@ const offerSchema = new mongoose.Schema({
   maxUsageCount: { type: Number, default: 40 }
 });
 
+offerSchema.index({ code: 1 }, { unique: true, sparse: true });
 
 // Create and export the model
 const Offer = mongoose.model('Offer', offerSchema);

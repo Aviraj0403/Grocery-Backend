@@ -6,35 +6,24 @@ import {
   getOfferById,
   getAllOffers,
   getActiveOffers,
+  getActivePromoCodeOffers,
   validatePromoCode,
   applyDiscount,
 } from '../controllers/offer.controller.js';
 
 const router = express.Router();
 
-// Create a new offer (Admin/Authorized only)
-router.post('/offers', createOffer);
+// Public/Admin Routes
+router.get('/offers', getAllOffers);                      // All offers
+router.get('/offers/active', getActiveOffers);            // Auto + promo offers active
+router.get('/offers/active/promos', getActivePromoCodeOffers); // Promo-code-based active offers
+router.get('/offers/:id', getOfferById);                  // Single offer by ID
+router.get('/offers/validate/:code', validatePromoCode);  // Validate promo code
+router.post('/offers/apply-discount', applyDiscount);     // Apply promo code discount
 
-// Update an existing offer by ID (Admin/Authorized only)
-router.put('/offers/:id', updateOffer);
-
-// Delete an offer by ID (Admin/Authorized only)
-router.delete('/offers/:id', deleteOffer);
-
-// Get all offers (Public or Admin)
-router.get('/offers', getAllOffers);
-
-// Get single offer by ID (Public or Admin)
-router.get('/offers/:id', getOfferById);
-
-// Get active offers (Public or Admin)
-// Removed restaurantId param since controller doesn't use it
-router.get('/offers/active', getActiveOffers);
-
-// Validate promo code (Public)
-router.get('/offers/validate/:code', validatePromoCode);
-
-// Apply promo code to cart/order (Public)
-router.post('/offers/apply-discount', applyDiscount);
+// Admin-only Routes (ideally with middleware)
+router.post('/offers', createOffer);                      // Create offer
+router.put('/offers/:id', updateOffer);                   // Update offer
+router.delete('/offers/:id', deleteOffer);                // Delete offer
 
 export default router;
