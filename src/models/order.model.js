@@ -51,6 +51,13 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  discountAmount: { type: Number, default: 0 },  // how much was discounted
+  discountCode: { type: String, default: null }, // e.g. 'SUMMER15'
+  offerApplied: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Offer",
+    default: null
+  },
   placedAt: {
     type: Date,
     default: Date.now

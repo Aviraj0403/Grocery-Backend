@@ -233,28 +233,64 @@ export const addProductImages = async (req, res) => {
 
 export const getAllProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 8, search = "", category } = req.query;
+    const { page = 1, limit = 12, search = "", category } = req.query;
 
     const skip = (page - 1) * limit;
+    let products = [];
+    let totalProducts = 0;
 
-    const query = {};
+    // Build category part of query
+    const categoryFilter = category ? { category } : {};
 
     if (search) {
-      query.$text = { $search: search };
+      // Attempt full-text search first
+      const textQuery = {
+        ...categoryFilter,
+        $text: { $search: search },
+      };
+
+      products = await Product.find(textQuery)
+        .populate("category subCategory")
+        .skip(Number(skip))
+        .limit(Number(limit))
+        .sort({ score: { $meta: "textScore" }, createdAt: -1 })
+        .select({ score: { $meta: "textScore" } });
+
+      totalProducts = await Product.countDocuments(textQuery);
+
+      // If no matches, fallback to regex
+      if (products.length === 0) {
+        const regexQuery = {
+          ...categoryFilter,
+          $or: [
+            { name: { $regex: search, $options: "i" } },
+            { brand: { $regex: search, $options: "i" } },
+            { tags: { $regex: search, $options: "i" } },
+          ],
+        };
+
+        products = await Product.find(regexQuery)
+          .populate("category subCategory")
+          .skip(Number(skip))
+          .limit(Number(limit))
+          .sort({ createdAt: -1 });
+
+        totalProducts = await Product.countDocuments(regexQuery);
+      }
+    } else {
+      // No search, just category or all products
+      const query = { ...categoryFilter };
+
+      products = await Product.find(query)
+        .populate("category subCategory")
+        .skip(Number(skip))
+        .limit(Number(limit))
+        .sort({ createdAt: -1 });
+
+      totalProducts = await Product.countDocuments(query);
     }
 
-    if (category) {
-      query.category = category;
-    }
-
-    const products = await Product.find(query)
-      .populate("category subCategory")
-      .skip(Number(skip))
-      .limit(Number(limit))
-      .sort({ createdAt: -1 });
-
-    const totalProducts = await Product.countDocuments(query);
-
+    // Respond
     res.json({
       success: true,
       products,
@@ -270,6 +306,7 @@ export const getAllProducts = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 
 // Get Single Product
@@ -450,4 +487,22 @@ export const getProductsByCategory = async (req, res) => {
     res.status(500).json({ success: false, message: "Error fetching products by category" });
   }
 };
+export const getTotalProducts = async (req, res) => {
+  try {
+    const total = await Product.countDocuments();
+
+    res.status(200).json({
+      success: true,
+      totalProducts: total,
+    });
+  } catch (error) {
+    console.error("Error fetching total products:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch total products.",
+      error: error.message,
+    });
+  }
+};
+
 

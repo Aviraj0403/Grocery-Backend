@@ -105,5 +105,22 @@ export const getUserAddresses = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+export const getTotalUsers = async (req, res) => {
+  try {
+    const total = await users.countDocuments();
+
+    res.status(200).json({
+      success: true,
+      totalUsers: total,
+    });
+  } catch (error) {
+    console.error("Error fetching total users:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch total users.",
+      error: error.message,
+    });
+  }
+};
 
 
