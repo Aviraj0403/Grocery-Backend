@@ -16,7 +16,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'https://grocery-ui-one.vercel.app',
-  'https://www.shanumart.in/'
+  'https://www.shanumart.in'
 ];
 
 app.use(cors({
