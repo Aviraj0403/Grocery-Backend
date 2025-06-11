@@ -242,6 +242,30 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Failed to reset password", error: err.message });
   }
 };
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await users.findOne({ email });
+
+    if (!user || user.resetOTP !== otp || user.otpExpiry < new Date()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // Clear OTP after verification
+    user.resetOTP = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      message: "OTP verified",
+      success: true,
+      email: user.email,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to verify OTP", error: err.message });
+  }
+};
+
 
 // Google OAuth Middleware
 export const changePassword = async (req, res) => {
@@ -313,7 +337,6 @@ export const logout = async (req, res) => {
 };
 
 
-
 // Profile
 export const profile = async (req, res) => {
   try {
@@ -337,29 +360,41 @@ export const authMe = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { firstName, lastName, phoneNumber, address } = req.body;
-    
-    const user = await users.findById(req.user.id);
 
+    // Prevent updates to protected fields
+    const forbiddenFields = ['email', 'password', 'roleType', '_id'];
+    for (let key of forbiddenFields) {
+      if (req.body[key]) {
+        return res.status(400).json({ message: `You cannot update field: ${key}` });
+      }
+    }
+
+    const user = await users.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Update basic fields if provided
     if (firstName !== undefined) user.firstName = firstName;
     if (lastName !== undefined) user.lastName = lastName;
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
 
-    // If Cloudinary avatar was uploaded in separate API, then update here too
+    // Handle avatar
     if (req.file?.path) {
       user.avatar = req.file.path;
     } else if (req.body.avatar) {
-      // If avatar URL is passed manually
+      // Optional: validate avatar URL here
       user.avatar = req.body.avatar;
     }
 
-    // Update address (nested carefully)
+    // Handle address update
     if (address) {
+      const allowedAddressFields = ['street', 'city', 'state', 'zip', 'country'];
+      const isInvalidField = Object.keys(address).some(field => !allowedAddressFields.includes(field));
+      if (isInvalidField) {
+        return res.status(400).json({ message: "Invalid address fields submitted" });
+      }
+
       user.address = {
-        ...user.address,   // keep old fields if not provided new
-        ...address         // overwrite with new fields
+        ...user.address,
+        ...address,
       };
     }
 
@@ -380,9 +415,13 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Profile Error:", error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(500).json({
+      message: "Something went wrong while updating the profile",
+      ...(process.env.NODE_ENV === "development" && { error: error.message }),
+    });
   }
 };
+
 export const uploadAvatar = async (req, res) => {
   try {
     const user = await users.findById(req.user.id);

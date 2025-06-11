@@ -11,9 +11,10 @@ import {
 } from '../controllers/product.controller.js';
 import  upload  from '../middlewares/upload.js'; // Assuming you have a multer setup in middlewares/multer.js
 import { verifyToken } from '../middlewares/verifyToken.js';
+import { authAdmin } from '../middlewares/authAdmin.js';
 const router = express.Router();
 
-router.post("/createProduct",createProduct);
+router.post("/createProduct",verifyToken,authAdmin,createProduct);
 router.post('/products/:productId/images', upload.array('files'), addProductImages);
 router.get("/getAllProducts",getAllProducts);
 router.get('/products', getAllProducts); // ✅ handles ?category= in query

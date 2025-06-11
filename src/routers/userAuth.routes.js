@@ -13,6 +13,7 @@ import {
   uploadAvatar,
   authMe,
   refreshToken,
+  verifyOtp,
 } from '../controllers/auth.controller.js';
 import  upload  from '../middlewares/upload.js';
 
@@ -23,10 +24,10 @@ const router = express.Router();
 // Public Routes
 router.post('/user/register', register);
 router.post('/user/login', login);
-// router.post('/otp/request', requestOtpLogin);
-// router.post('/otp/verify', verifyOtpLogin);
+;
 router.post('/user/forgotPassword', forgotPassword);
 router.post('/user/resetPassword', resetPassword);
+router.post('/user/verifyOtp', verifyOtp);
 router.post('/user/googleLogin', googleLogin);
 
 // Protected Routes
