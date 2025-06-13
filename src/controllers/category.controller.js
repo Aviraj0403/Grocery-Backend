@@ -1,24 +1,19 @@
 import Category from "../models/category.model.js";
+import Product from "../models/product.model.js";
+import cloudinary from '../config/cloudinaryConfig.js';
 import slugify from 'slugify';
-import { uploadImageToCloudinary } from '../controllers/imageUploadController.js'; // Reusable Cloudinary upload function
-import { unlink } from 'fs/promises'; // Use async unlink for safer file deletion
-import fs from 'fs'; // Ensure fs is imported
+import fs from 'fs';
 
+// CREATE CATEGORY
 export const createCategory = async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      parentCategory,
-      type,
-      displayOrder
-    } = req.body;
+    const { name, description, parentCategory, type, displayOrder } = req.body;
 
     if (!name) {
       return res.status(400).json({ success: false, message: "Name is required." });
     }
 
-    // Generate unique slug
+    // Generate a unique slug
     let baseSlug = slugify(name, { lower: true, strict: true });
     let slug = baseSlug;
     let count = 1;
@@ -28,12 +23,17 @@ export const createCategory = async (req, res) => {
 
     const imageUrl = req.cloudinaryImageUrl || '';
     const publicId = req.cloudinaryPublicId || '';
+     
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+      console.log(`🧹 Deleted local temp file: ${req.file.path}`);
+    }
 
     const newCategory = await Category.create({
       name,
       slug,
       description,
-      parentCategory: (type === 'Sub' && !parentCategory) ? null : parentCategory,
+      parentCategory: type === 'Sub' && !parentCategory ? null : parentCategory,
       type,
       displayOrder,
       image: imageUrl ? [imageUrl] : [],
@@ -43,70 +43,55 @@ export const createCategory = async (req, res) => {
     res.status(201).json({ success: true, category: newCategory });
   } catch (error) {
     console.error("Error creating category:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
-
 
 // UPDATE CATEGORY
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      name,
-      description,
-      parentCategory,
-      type,
-      displayOrder
-    } = req.body;
+    const { name, description, parentCategory, type, displayOrder } = req.body;
 
     const category = await Category.findById(id);
     if (!category) return res.status(404).json({ success: false, message: "Category not found." });
 
-    let imageUrl = category.image[0]; // Keep the old image URL if no new image is uploaded
+    let imageUrl = category.image?.[0] || '';
     let publicId = category.publicId;
 
-    if (req.file) {
-      // If there is an old image in Cloudinary, delete it before uploading the new one
+    if (req.file && req.cloudinaryImageUrl && req.cloudinaryPublicId) {
       if (publicId) {
-        await cloudinary.uploader.destroy(publicId);
+        try {
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.warn(`Failed to delete old Cloudinary image: ${err.message}`);
+        }
       }
 
-      // Use the URL and public ID from Cloudinary upload middleware
-      imageUrl = req.cloudinaryImageUrl || category.image[0]; // New image URL if available
-      publicId = req.cloudinaryPublicId || category.publicId; // New public ID if available
+      imageUrl = req.cloudinaryImageUrl;
+      publicId = req.cloudinaryPublicId;
 
-      // Remove the local file after uploading to Cloudinary
-      try {
-        const localFilePath = req.file.path; // Local file path
-        console.log("Attempting to delete file at:", localFilePath); // Log the file path being deleted
-        if (fs.existsSync(localFilePath)) {
-          fs.unlinkSync(localFilePath); // Safely delete the local file
-          console.log(`File deleted successfully: ${localFilePath}`);
-        } else {
-          console.log(`File ${localFilePath} not found, skipping deletion.`);
-        }
-      } catch (err) {
-        console.error(`Error deleting local file: ${err.message}`);
+      const localPath = req.file.path;
+      if (fs.existsSync(localPath)) {
+        fs.unlinkSync(localPath);
+        console.log(`Deleted local temp file: ${localPath}`);
       }
     }
 
-    // Update the category data
     category.name = name || category.name;
     category.slug = slugify(name || category.name, { lower: true, strict: true });
     category.description = description || category.description;
-    category.parentCategory = (type === 'Sub' && (!parentCategory || parentCategory === '')) ? null : parentCategory;
+    category.parentCategory = type === 'Sub' && !parentCategory ? null : parentCategory;
     category.type = type || category.type;
     category.displayOrder = displayOrder || category.displayOrder;
     category.image = [imageUrl];
     category.publicId = publicId;
 
-    // Save the updated category
     await category.save();
     res.json({ success: true, category });
   } catch (error) {
     console.error("Error updating category:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
 
@@ -115,18 +100,31 @@ export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const category = await Category.findById(id);
-    if (!category) return res.status(404).json({ success: false, message: "Category not found." });
-
-    // Delete Cloudinary image
-    if (category.publicId) {
-      await cloudinary.uploader.destroy(category.publicId);
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found." });
     }
 
+    // Delete image from Cloudinary
+    if (category.publicId) {
+      try {
+        await cloudinary.uploader.destroy(category.publicId);
+      } catch (err) {
+        console.warn("Error deleting Cloudinary image:", err.message);
+      }
+    }
+
+    // Nullify references in Product
+    await Product.updateMany(
+      { $or: [{ category: id }, { subCategory: id }] },
+      { $set: { category: null, subCategory: null } }
+    );
+
     await Category.findByIdAndDelete(id);
-    res.json({ success: true, message: "Category deleted successfully." });
+
+    res.json({ success: true, message: "Category deleted and related products updated." });
   } catch (error) {
     console.error("Error deleting category:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
 
@@ -137,55 +135,41 @@ export const getAllCategories = async (req, res) => {
     res.json({ success: true, categories });
   } catch (error) {
     console.error("Error fetching categories:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
-// GET /api/categories/main
+
+// GET MAIN CATEGORIES
 export const getMainCategories = async (req, res) => {
   try {
-    const mains = await Category
-      .find({ parentCategory: null })   // all roots
-      .sort({ displayOrder: 1 })
-      .lean();
-    res.json({ success: true, categories: mains });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+    const categories = await Category.find({ parentCategory: null }).sort({ displayOrder: 1 }).lean();
+    res.json({ success: true, categories });
+  } catch (error) {
+    console.error("Error fetching main categories:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
-// GET /api/categories/:id/details
+
+// GET CATEGORY DETAILS (with subcategories + products)
 export const getCategoryDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    // 1) pull direct subs
-    const subcats = await Category
-      .find({ parentCategory: id })
-      .sort({ displayOrder: 1 })
-      .lean();
 
-    // 2) assemble an array of category IDs to include:
-    //    – the main one, plus its direct sub‐IDs
-    const catIds = [ id, ...subcats.map(c => c._id) ];
+    const subcategories = await Category.find({ parentCategory: id }).sort({ displayOrder: 1 }).lean();
+    const allCategoryIds = [id, ...subcategories.map(cat => cat._id)];
 
-    // 3) fetch products whose category OR subCategory is in that list
-    const products = await Product
-      .find({
-        $or: [
-          { category:   { $in: catIds } },
-          { subCategory:{ $in: catIds } }
-        ]
-      })
-      .sort({ createdAt: -1 })
-      .lean();
+    const products = await Product.find({
+      $or: [{ category: { $in: allCategoryIds } }, { subCategory: { $in: allCategoryIds } }]
+    }).sort({ createdAt: -1 }).lean();
 
     res.json({
-      success:      true,
-      subcategories: subcats,
+      success: true,
+      subcategories,
       products
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    console.error("Error fetching category details:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
 
@@ -193,10 +177,12 @@ export const getCategoryDetails = async (req, res) => {
 export const getCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
-    if (!category) return res.status(404).json({ success: false, message: "Category not found." });
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found." });
+    }
     res.json({ success: true, category });
   } catch (error) {
     console.error("Error fetching category:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };

@@ -192,26 +192,20 @@ export const forgotPassword = async (req, res) => {
     const user = await users.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // const token = crypto.randomBytes(20).toString('hex');
-    // const expires = new Date(Date.now() + 15 * 60 * 1000);
-    
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); 
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
-    
+    const otp = Math.floor(100000 + Math.random() * 900000); // ✅ numeric OTP
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // ✅ 10 minutes expiry
+
     user.resetOTP = otp;
-    user.resetOTPExpiry = otpExpiry;
-    // user.resetPasswordToken = token;
-    // user.resetPasswordExpires = expires;
+    user.otpExpiry = otpExpiry;
     await user.save();
 
-    // mail
+    // ✅ Send OTP via mail
     await sendMailer(email, "Password Reset OTP", "otp", {
       customerName: user.userName,
       otp,
     });
 
     res.status(200).json({ message: "OTP sent to your email" });
-
   } catch (error) {
     console.error("Forgot Password Error:", error);
     res.status(500).json({
@@ -221,40 +215,44 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
     const user = await users.findOne({ email });
 
-    if (!user || user.resetOTP !== otp || user.otpExpiry < new Date()) {
+    if (!user || user.resetOTP !== Number(otp) || user.otpExpiry < new Date()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    user.password = hashPassword(newPassword);
+    user.password = hashPassword(newPassword); // Make sure hashPassword is correct & async handled if needed
     user.resetOTP = null;
     user.otpExpiry = null;
     await user.save();
+
     await sendMailer(email, "Password Reset Confirmation", "resetPassword", {
       customerName: user.userName,
     });
+
     res.status(200).json({ message: "Password reset successful" });
   } catch (err) {
     res.status(500).json({ message: "Failed to reset password", error: err.message });
   }
 };
+
+
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
     const user = await users.findOne({ email });
 
-    if (!user || user.resetOTP !== otp || user.otpExpiry < new Date()) {
+    if (!user || user.resetOTP !== Number(otp) || user.otpExpiry < new Date()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    // Clear OTP after verification
-    user.resetOTP = undefined;
-    user.otpExpiry = undefined;
-    await user.save();
+    // user.resetOTP = undefined;
+    // user.otpExpiry = undefined;
+    // await user.save();
 
     return res.status(200).json({
       message: "OTP verified",
@@ -262,9 +260,16 @@ export const verifyOtp = async (req, res) => {
       email: user.email,
     });
   } catch (err) {
-    return res.status(500).json({ message: "Failed to verify OTP", error: err.message });
+    return res.status(500).json({
+      message: "Failed to verify OTP",
+      error: err.message,
+    });
   }
 };
+
+
+
+
 
 
 // Google OAuth Middleware
