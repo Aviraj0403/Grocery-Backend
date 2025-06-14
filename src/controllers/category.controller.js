@@ -150,20 +150,35 @@ export const getMainCategories = async (req, res) => {
   }
 };
 
-// GET CATEGORY DETAILS (with subcategories + products)
+
 export const getCategoryDetails = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const subcategories = await Category.find({ parentCategory: id }).sort({ displayOrder: 1 }).lean();
+    // Fetch main category name only
+    const mainCategory = await Category.findById(id).select("name").lean();
+
+    if (!mainCategory) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    const subcategories = await Category.find({ parentCategory: id })
+      .sort({ displayOrder: 1 })
+      .lean();
+
     const allCategoryIds = [id, ...subcategories.map(cat => cat._id)];
 
     const products = await Product.find({
-      $or: [{ category: { $in: allCategoryIds } }, { subCategory: { $in: allCategoryIds } }]
+      $or: [
+        { category: { $in: allCategoryIds } },
+        { subCategory: { $in: allCategoryIds } }
+      ]
     }).sort({ createdAt: -1 }).lean();
 
+    // ✅ Return only category name
     res.json({
       success: true,
+      categoryName: mainCategory.name,
       subcategories,
       products
     });
@@ -172,6 +187,7 @@ export const getCategoryDetails = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
+
 
 // GET SINGLE CATEGORY
 export const getCategory = async (req, res) => {
