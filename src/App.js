@@ -25,6 +25,7 @@ const allowedOrigins = [
   'http://localhost:5173', // Local development
   'https://grocery-ui-one.vercel.app', // Staging or demo
   'https://www.shanumart.in', // Production
+  'capacitor://localhost',
 ];
 
 // Enable CORS
