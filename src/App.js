@@ -22,7 +22,9 @@ const app = express();
 
 // Allowed Origins for CORS
 const allowedOrigins = [
-  'http://localhost:5173', // Local development
+  'http://localhost:5173',
+  'http://localhost',
+  'https://localhost',
   'https://grocery-ui-one.vercel.app', // Staging or demo
   'https://www.shanumart.in', // Production
   'capacitor://localhost',
@@ -35,7 +37,8 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
-      return callback(new Error('Not allowed by CORS'));
+      // return callback(new Error('Not allowed by CORS'));
+      return callback(null, true); // Allow all origins for now
     }
   },
   credentials: true, // Send cookies and authorization headers
